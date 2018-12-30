@@ -600,82 +600,60 @@ fn decide_tag(
     internal_tag: Attr<String>,
     content: Attr<String>,
 ) -> TagType {
-    match (
-        untagged.0.get_with_tokens(),
-        internal_tag.get_with_tokens(),
-        content.get_with_tokens(),
-    ) {
-        (None, None, None) => TagType::External,
-        (Some(_), None, None) => TagType::None,
-        (None, Some((_, tag)), None) => {
-            // Check that there are no tuple variants.
-            if let syn::Data::Enum(ref data) = item.data {
-                for variant in &data.variants {
-                    match variant.fields {
-                        syn::Fields::Named(_) | syn::Fields::Unit => {}
-                        syn::Fields::Unnamed(ref fields) => {
-                            if fields.unnamed.len() != 1 {
-                                cx.error_spanned_by(
-                                    variant,
-                                    "#[serde(tag = \"...\")] cannot be used with tuple \
-                                     variants",
-                                );
-                                break;
+    if let Some((ref untagged_tokens, _)) = untagged.0.get_with_tokens() {
+        if let Some((tag_tokens, _)) = internal_tag.get_with_tokens() {
+            cx.error_spanned_by(
+                untagged_tokens,
+                "enum cannot be both untagged and internally tagged",
+            );
+            cx.error_spanned_by(
+                tag_tokens,
+                "enum cannot be both untagged and internally tagged",
+            );
+        }
+        if let Some((content_tokens, _)) = content.get_with_tokens() {
+            cx.error_spanned_by(
+                untagged_tokens,
+                "untagged enum cannot have #[serde(content = \"...\")]",
+            );
+            cx.error_spanned_by(
+                content_tokens,
+                "untagged enum cannot have #[serde(content = \"...\")]",
+            );
+        }
+        TagType::None
+    } else if let Some((_, tag)) = internal_tag.get_with_tokens() {
+        match content.get_with_tokens() {
+            Some((_, content)) => TagType::Adjacent { tag: tag, content: content, },
+            None => {
+                if let syn::Data::Enum(ref data) = item.data {
+                    for variant in &data.variants {
+                        match variant.fields {
+                            syn::Fields::Named(_) | syn::Fields::Unit => {}
+                            syn::Fields::Unnamed(ref fields) => {
+                                if fields.unnamed.len() != 1 {
+                                    cx.error_spanned_by(
+                                        variant,
+                                        "#[serde(tag = \"...\")] cannot be used with tuple \
+                                         variants",
+                                    );
+                                    break;
+                                }
                             }
                         }
                     }
                 }
+                TagType::Internal { tag: tag }
             }
-            TagType::Internal { tag: tag }
         }
-        (Some((untagged_tokens, _)), Some((tag_tokens, _)), None) => {
-            cx.error_spanned_by(
-                untagged_tokens,
-                "enum cannot be both untagged and internally tagged",
-            );
-            cx.error_spanned_by(
-                tag_tokens,
-                "enum cannot be both untagged and internally tagged",
-            );
-            TagType::External // doesn't matter, will error
-        }
-        (None, None, Some((content_tokens, _))) => {
-            cx.error_spanned_by(
-                content_tokens,
-                "#[serde(tag = \"...\", content = \"...\")] must be used together",
-            );
-            TagType::External
-        }
-        (Some((untagged_tokens, _)), None, Some((content_tokens, _))) => {
-            cx.error_spanned_by(
-                untagged_tokens,
-                "untagged enum cannot have #[serde(content = \"...\")]",
-            );
-            cx.error_spanned_by(
-                content_tokens,
-                "untagged enum cannot have #[serde(content = \"...\")]",
-            );
-            TagType::External
-        }
-        (None, Some((_, tag)), Some((_, content))) => TagType::Adjacent {
-            tag: tag,
-            content: content,
-        },
-        (Some((untagged_tokens, _)), Some((tag_tokens, _)), Some((content_tokens, _))) => {
-            cx.error_spanned_by(
-                untagged_tokens,
-                "untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]",
-            );
-            cx.error_spanned_by(
-                tag_tokens,
-                "untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]",
-            );
-            cx.error_spanned_by(
-                content_tokens,
-                "untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]",
-            );
-            TagType::External
-        }
+    } else if let Some((ref content_tokens, _)) = content.get_with_tokens() {
+        cx.error_spanned_by(
+            content_tokens,
+            "#[serde(tag = \"...\", content = \"...\")] must be used together",
+        );
+        TagType::External // Doesn't matter, will always error out
+    } else {
+        TagType::External
     }
 }
 

@@ -78,7 +78,6 @@ mod pretend;
 mod ser;
 mod try;
 
-#[proc_macro_derive(Serialize, attributes(serde))]
 pub fn derive_serialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     ser::expand_derive_serialize(&input)
@@ -86,7 +85,6 @@ pub fn derive_serialize(input: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(Deserialize, attributes(serde))]
 pub fn derive_deserialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     de::expand_derive_deserialize(&input)

@@ -21,7 +21,6 @@ deserialize_in_place = []
 
 [lib]
 name = "serde_derive"
-proc-macro = true
 
 [dependencies]
 proc-macro2 = "1.0"

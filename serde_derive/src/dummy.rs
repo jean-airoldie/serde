@@ -9,7 +9,7 @@ pub fn wrap_in_const(
     ty: &Ident,
     code: TokenStream,
 ) -> TokenStream {
-    let try_replacement = try::replacement();
+    let tryreplacement = try::replacement();
 
     let dummy_const = Ident::new(
         &format!("_IMPL_{}_FOR_{}", trait_, unraw(ty)),
@@ -32,7 +32,7 @@ pub fn wrap_in_const(
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const #dummy_const: () = {
             #use_serde
-            #try_replacement
+            #tryreplacement
             #code
         };
     }
